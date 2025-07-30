@@ -1,8 +1,7 @@
 import csv
 import time as tm
 
-PROZ = 0.8
-
+PROZ = 1
 
 
 start = tm.time()
@@ -17,13 +16,13 @@ intervals = [f"({edges[i]} – {edges[i+1]}]" for i in range(len(edges) - 1)]
 counts = {key: 0 for key in intervals}
 closed_counts = {key: 0 for key in intervals}
 
-with open("SBER_250115_250411.csv", "r", encoding="utf-8") as f:
-    reader = csv.reader(f)
+with open("SBER-1.txt", "r", encoding="utf-8") as f:
+    reader = csv.reader(f, delimiter='\t')
     header = next(reader)
     rows = list(reader)
 
 
-temp_data = rows[0][2]
+temp_data = rows[0][1].split()[0]
 dq = []
 
 for i in range(1, len(rows)):
@@ -31,13 +30,12 @@ for i in range(1, len(rows)):
     row = rows[i]
 
     try:
-        date = row[2]
-        time = row[3]
-        high = float(row[5])
-        low = float(row[6])
-        close = float(row[7])
-        prev_close = float(prev_row[7])
-        prev_date = prev_row[2]
+        date = row[0].split()[0]
+        high = float(row[3])
+        low = float(row[4])
+        close = float(row[5])
+        prev_close = float(prev_row[5])
+        prev_date = prev_row[0].split()[0]
     except ValueError:
         continue
 
@@ -45,6 +43,10 @@ for i in range(1, len(rows)):
         temp_data = date
         dq.clear()
         continue
+    while dq and high >= (dq[-1][0] - dq[-1][1]) * PROZ + dq[-1][1]:
+        pc, l, key = dq.pop()
+        closed_counts[key] += 1
+
 
     if low < prev_close and close < prev_close:
         change = abs((low - prev_close) / prev_close * 100)
@@ -59,11 +61,8 @@ for i in range(1, len(rows)):
         dq.append((prev_close, low, key))
         dq.sort(reverse=True)
 
-        while dq and high >= (dq[-1][0] - dq[-1][1]) * PROZ + dq[-1][1]:
-            pc, l, key = dq.pop()
-            closed_counts[key] += 1
 
-with open("interval_restore_stats2.csv", "w", encoding="utf-8") as out:
+with open("SBER_1_stats.csv", "w", encoding="utf-8") as out:
     out.write("Интервал,Количество,Закрытые\n")
     for key in intervals:
         count = counts[key]
